@@ -21,6 +21,8 @@ class MainActivity : AppCompatActivity() {
 
     private lateinit var binding: ActivityMainBinding
     private var previousOrientation = Configuration.ORIENTATION_UNDEFINED
+    private var isTwoPageMode = false
+    var isAlive : Boolean = false
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -38,7 +40,11 @@ class MainActivity : AppCompatActivity() {
                 tempFile.writeBytes(pdfByteArray)
 
                 runOnUiThread {
-                    displayPDF(tempFile)
+                    if(isTwoPageMode) {
+                        displayTwoPages(tempFile)
+                    } else {
+                        displayPDF(tempFile)
+                    }
                 }
             }.start()
         }
@@ -57,30 +63,44 @@ class MainActivity : AppCompatActivity() {
                 tempFile.writeBytes(pdfByteArray)
 
                 runOnUiThread {
-                    displayTwoPages(tempFile)
+                    if(newConfig.orientation == Configuration.ORIENTATION_LANDSCAPE) {
+                        isTwoPageMode = true
+                        displayTwoPages(tempFile)
+                    } else {
+                        isTwoPageMode = false
+                        displayPDF(tempFile)
+                    }
                 }
             }.start()
         }
     }
 
     private fun displayPDF(file: File) {
-        binding.pdfView.maxZoom = 6.0f
-        binding.pdfView.midZoom = 3.0f
-        binding.pdfView.useBestQuality(true)
-        binding.pdfView.fromFile(file)
-            .enableSwipe(true)
-            .enableDoubletap(true)
-            .defaultPage(0)
-            .scrollHandle(DefaultScrollHandle(this))
-            .spacing(10)
-            .swipeHorizontal(true)
-            .enableAntialiasing(true)
-            .autoSpacing(true)
-            .pageFitPolicy(FitPolicy.BOTH)
-            .pageSnap(true)
-            .pageFling(true)
-            .fitEachPage(true)
-            .load()
+        try {
+            if (!isAlive){
+                return
+            }
+            binding.pdfView.maxZoom = 6.0f
+            binding.pdfView.midZoom = 3.0f
+            binding.pdfView.useBestQuality(true)
+            binding.pdfView.fromFile(file)
+                .enableSwipe(true)
+                .enableDoubletap(true)
+                .defaultPage(0)
+                .scrollHandle(DefaultScrollHandle(this))
+                .spacing(10)
+                .swipeHorizontal(true)
+                .enableAntialiasing(true)
+                .autoSpacing(true)
+                .pageFitPolicy(FitPolicy.BOTH)
+                .pageSnap(true)
+                .pageFling(true)
+                .fitEachPage(true)
+                .load()
+        }
+        catch (e: Exception) {
+            e.printStackTrace()
+        }
     }
 
     private fun downloadPDF(url: String): ByteArray {
@@ -107,19 +127,26 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun displayTwoPages(file: File) {
-        val renderer = PdfRenderer(ParcelFileDescriptor.open(file, ParcelFileDescriptor.MODE_READ_ONLY))
-        val view1 = createPdfView(renderer, 0)
-        val view2 = createPdfView(renderer, 1)
+        try {
+            if (!isAlive){
+                return
+            }
+            val renderer = PdfRenderer(ParcelFileDescriptor.open(file, ParcelFileDescriptor.MODE_READ_ONLY))
+            val view1 = createPdfView(renderer, 0)
+            val view2 = createPdfView(renderer, 1)
 
-        view1.layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.MATCH_PARENT, 1f)
-        view2.layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.MATCH_PARENT, 1f)
+            view1.layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.MATCH_PARENT, 1f)
+            view2.layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.MATCH_PARENT, 1f)
 
-        val layout = LinearLayout(this)
-        layout.orientation = LinearLayout.HORIZONTAL
-        layout.addView(view1)
-        layout.addView(view2)
+            val layout = LinearLayout(this)
+            layout.orientation = LinearLayout.HORIZONTAL
+            layout.addView(view1)
+            layout.addView(view2)
 
-        setContentView(layout)
+            setContentView(layout)
+        } catch (e: Exception) {
+            e.printStackTrace()
+        }
     }
 
     private fun createPdfView(renderer: PdfRenderer, pageNumber: Int): ImageView {
@@ -133,6 +160,26 @@ class MainActivity : AppCompatActivity() {
         page.close()
 
         return imageView
+    }
+
+    override fun onResume() {
+        super.onResume()
+        isAlive = true
+    }
+
+    override fun onPause() {
+        super.onPause()
+        isAlive = false
+    }
+
+    override fun onStop() {
+        super.onStop()
+        isAlive = false
+    }
+
+    override fun onDestroy() {
+        super.onDestroy()
+        isAlive = false
     }
 
 }
