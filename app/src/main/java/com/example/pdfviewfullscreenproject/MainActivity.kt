@@ -11,11 +11,7 @@ import androidx.appcompat.app.AppCompatActivity
 import com.example.pdfviewfullscreenproject.databinding.ActivityMainBinding
 import com.github.barteksc.pdfviewer.scroll.DefaultScrollHandle
 import com.github.barteksc.pdfviewer.util.FitPolicy
-import java.io.BufferedInputStream
-import java.io.ByteArrayOutputStream
 import java.io.File
-import java.net.HttpURLConnection
-import java.net.URL
 
 class MainActivity : AppCompatActivity() {
 
@@ -33,20 +29,15 @@ class MainActivity : AppCompatActivity() {
         if (previousOrientation != currentOrientation) {
             previousOrientation = currentOrientation
 
-            val pdfUrl = "https://www.africau.edu/images/default/sample.pdf"
             val tempFile = File.createTempFile("temp", ".pdf", cacheDir)
-            Thread {
-                val pdfByteArray = downloadPDF(pdfUrl)
-                tempFile.writeBytes(pdfByteArray)
+            tempFile.writeBytes(assets.open("sample.pdf").readBytes())
 
-                runOnUiThread {
-                    if(isTwoPageMode) {
-                        displayTwoPages(tempFile)
-                    } else {
-                        displayPDF(tempFile)
-                    }
-                }
-            }.start()
+            if(isTwoPageMode) {
+                displayTwoPages(tempFile)
+            } else {
+                displayPDF(tempFile)
+            }
+
         }
     }
 
@@ -56,30 +47,20 @@ class MainActivity : AppCompatActivity() {
         if (newConfig.orientation != previousOrientation) {
             previousOrientation = newConfig.orientation
 
-            val pdfUrl = "https://www.africau.edu/images/default/sample.pdf"
             val tempFile = File.createTempFile("temp", ".pdf", cacheDir)
-            Thread {
-                val pdfByteArray = downloadPDF(pdfUrl)
-                tempFile.writeBytes(pdfByteArray)
+            tempFile.writeBytes(assets.open("sample.pdf").readBytes())
 
-                runOnUiThread {
-                    if(newConfig.orientation == Configuration.ORIENTATION_LANDSCAPE) {
-                        isTwoPageMode = true
-                        displayTwoPages(tempFile)
-                    } else {
-                        isTwoPageMode = false
-                        displayPDF(tempFile)
-                    }
-                }
-            }.start()
+            if(isTwoPageMode) {
+                displayTwoPages(tempFile)
+            } else {
+                displayPDF(tempFile)
+            }
+
         }
     }
 
     private fun displayPDF(file: File) {
         try {
-            if (!isAlive){
-                return
-            }
             binding.pdfView.maxZoom = 6.0f
             binding.pdfView.midZoom = 3.0f
             binding.pdfView.useBestQuality(true)
@@ -101,29 +82,6 @@ class MainActivity : AppCompatActivity() {
         catch (e: Exception) {
             e.printStackTrace()
         }
-    }
-
-    private fun downloadPDF(url: String): ByteArray {
-        val connection = URL(url).openConnection() as HttpURLConnection
-        connection.connectTimeout = 5000
-        connection.readTimeout = 10000
-        connection.requestMethod = "GET"
-
-        val inputStream = BufferedInputStream(connection.inputStream)
-        val outputStream = ByteArrayOutputStream()
-
-        val buffer = ByteArray(1024)
-        var bytesRead: Int
-        while (inputStream.read(buffer).also { bytesRead = it } != -1) {
-            outputStream.write(buffer, 0, bytesRead)
-        }
-
-        outputStream.flush()
-        outputStream.close()
-        inputStream.close()
-        connection.disconnect()
-
-        return outputStream.toByteArray()
     }
 
     private fun displayTwoPages(file: File) {
