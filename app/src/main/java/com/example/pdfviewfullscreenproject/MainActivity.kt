@@ -5,6 +5,7 @@ import android.graphics.Bitmap
 import android.graphics.pdf.PdfRenderer
 import android.os.Bundle
 import android.os.ParcelFileDescriptor
+import android.widget.HorizontalScrollView
 import android.widget.ImageView
 import android.widget.LinearLayout
 import androidx.appcompat.app.AppCompatActivity
@@ -13,13 +14,12 @@ import com.github.barteksc.pdfviewer.scroll.DefaultScrollHandle
 import com.github.barteksc.pdfviewer.util.FitPolicy
 import java.io.File
 
+
 class MainActivity : AppCompatActivity() {
 
     private lateinit var binding: ActivityMainBinding
     private var previousOrientation = Configuration.ORIENTATION_UNDEFINED
     private var isTwoPageMode = false
-    var isAlive : Boolean = false
-
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         binding = ActivityMainBinding.inflate(layoutInflater)
@@ -41,6 +41,8 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
+
+
     override fun onConfigurationChanged(newConfig: Configuration) {
         super.onConfigurationChanged(newConfig)
 
@@ -49,6 +51,8 @@ class MainActivity : AppCompatActivity() {
 
             val tempFile = File.createTempFile("temp", ".pdf", cacheDir)
             tempFile.writeBytes(assets.open("sample.pdf").readBytes())
+
+            isTwoPageMode = newConfig.orientation == Configuration.ORIENTATION_LANDSCAPE
 
             if(isTwoPageMode) {
                 displayTwoPages(tempFile)
@@ -86,26 +90,36 @@ class MainActivity : AppCompatActivity() {
 
     private fun displayTwoPages(file: File) {
         try {
-            if (!isAlive){
-                return
-            }
             val renderer = PdfRenderer(ParcelFileDescriptor.open(file, ParcelFileDescriptor.MODE_READ_ONLY))
-            val view1 = createPdfView(renderer, 0)
-            val view2 = createPdfView(renderer, 1)
 
-            view1.layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.MATCH_PARENT, 1f)
-            view2.layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.MATCH_PARENT, 1f)
-
+            val pageCount = renderer.pageCount
             val layout = LinearLayout(this)
             layout.orientation = LinearLayout.HORIZONTAL
-            layout.addView(view1)
-            layout.addView(view2)
 
-            setContentView(layout)
+            for (i in 0 until pageCount step 2) {
+                val view1 = createPdfView(renderer, i)
+                val view2 = if (i + 1 < pageCount) createPdfView(renderer, i + 1) else null
+
+                val pageLayout = LinearLayout(this)
+                pageLayout.orientation = LinearLayout.HORIZONTAL
+                pageLayout.addView(view1)
+
+                if (view2 != null) {
+                    pageLayout.addView(view2)
+                }
+                layout.addView(pageLayout)
+            }
+
+            val scrollView = HorizontalScrollView(this)
+            scrollView.addView(layout)
+            setContentView(scrollView)
+
         } catch (e: Exception) {
             e.printStackTrace()
         }
     }
+
+
 
     private fun createPdfView(renderer: PdfRenderer, pageNumber: Int): ImageView {
         val page = renderer.openPage(pageNumber)
@@ -118,26 +132,6 @@ class MainActivity : AppCompatActivity() {
         page.close()
 
         return imageView
-    }
-
-    override fun onResume() {
-        super.onResume()
-        isAlive = true
-    }
-
-    override fun onPause() {
-        super.onPause()
-        isAlive = false
-    }
-
-    override fun onStop() {
-        super.onStop()
-        isAlive = false
-    }
-
-    override fun onDestroy() {
-        super.onDestroy()
-        isAlive = false
     }
 
 }
