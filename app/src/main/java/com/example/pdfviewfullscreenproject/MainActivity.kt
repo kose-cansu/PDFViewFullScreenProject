@@ -85,25 +85,6 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun displayTwoPages(file: File) {
-        try {
-            val renderer = PdfRenderer(ParcelFileDescriptor.open(file, ParcelFileDescriptor.MODE_READ_ONLY))
-            val pageCount = renderer.pageCount
 
-            val layout = LinearLayout(this)
-            layout.orientation = LinearLayout.HORIZONTAL
-
-            val recyclerView = RecyclerView(this)
-            recyclerView.layoutManager = LinearLayoutManager(this, LinearLayoutManager.HORIZONTAL, false)
-            val adapter = PdfAdapter(this, file)
-            recyclerView.adapter = adapter
-
-            layout.addView(recyclerView)
-
-            val scrollView = HorizontalScrollView(this)
-            scrollView.addView(layout)
-            setContentView(scrollView)
-        } catch (e: Exception) {
-            e.printStackTrace()
-        }
     }
 }
