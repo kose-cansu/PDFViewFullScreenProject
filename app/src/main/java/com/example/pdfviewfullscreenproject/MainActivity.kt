@@ -1,6 +1,7 @@
 package com.example.pdfviewfullscreenproject
 
 import android.content.res.Configuration
+import android.content.res.Resources
 import android.os.Bundle
 import android.util.Log
 import androidx.appcompat.app.AppCompatActivity
@@ -31,6 +32,7 @@ class MainActivity : AppCompatActivity() {
         setContentView(binding.root)
 
         val currentOrientation = resources.configuration.orientation
+        isTwoPageMode = currentOrientation == Configuration.ORIENTATION_LANDSCAPE
         if (previousOrientation != currentOrientation) {
             previousOrientation = currentOrientation
 
@@ -72,9 +74,7 @@ class MainActivity : AppCompatActivity() {
             binding.pdfView.fromFile(file)
                 .enableSwipe(true)
                 .enableDoubletap(true)
-                .defaultPage(0)
                 .scrollHandle(DefaultScrollHandle(this))
-                .spacing(10)
                 .swipeHorizontal(true)
                 .enableAntialiasing(true)
                 .autoSpacing(true)
@@ -102,8 +102,7 @@ class MainActivity : AppCompatActivity() {
             val cb = writer.directContent
             val page = writer.getImportedPage(reader, i) // page #1
             val documentWidth = doc.pageSize.width / 2
-            var documentHeight = doc.pageSize.height
-            if (i > 1) documentHeight -= 50f
+            val documentHeight = doc.pageSize.height
             var pageWidth = page.width
             var pageHeight = page.height
             var widthScale = documentWidth / pageWidth
