@@ -1,18 +1,22 @@
 package com.example.pdfviewfullscreenproject
 
 import android.content.res.Configuration
-import android.graphics.pdf.PdfRenderer
 import android.os.Bundle
-import android.os.ParcelFileDescriptor
-import android.widget.HorizontalScrollView
-import android.widget.LinearLayout
+import android.util.Log
 import androidx.appcompat.app.AppCompatActivity
-import androidx.recyclerview.widget.LinearLayoutManager
-import androidx.recyclerview.widget.RecyclerView
 import com.example.pdfviewfullscreenproject.databinding.ActivityMainBinding
 import com.github.barteksc.pdfviewer.scroll.DefaultScrollHandle
 import com.github.barteksc.pdfviewer.util.FitPolicy
+import com.itextpdf.text.Document
+import com.itextpdf.text.DocumentException
+import com.itextpdf.text.RectangleReadOnly
+import com.itextpdf.text.pdf.PdfCopy
+import com.itextpdf.text.pdf.PdfReader
+import com.itextpdf.text.pdf.PdfWriter
 import java.io.File
+import java.io.FileOutputStream
+import java.io.IOException
+import kotlin.math.min
 
 
 class MainActivity : AppCompatActivity() {
@@ -34,7 +38,7 @@ class MainActivity : AppCompatActivity() {
             tempFile.writeBytes(assets.open("sample.pdf").readBytes())
 
             if (isTwoPageMode) {
-                displayTwoPages(tempFile)
+                displayTwoPages()
             } else {
                 displayPDF(tempFile)
             }
@@ -53,7 +57,7 @@ class MainActivity : AppCompatActivity() {
             isTwoPageMode = newConfig.orientation == Configuration.ORIENTATION_LANDSCAPE
 
             if (isTwoPageMode) {
-                displayTwoPages(tempFile)
+                displayTwoPages()
             } else {
                 displayPDF(tempFile)
             }
@@ -84,7 +88,53 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    private fun displayTwoPages(file: File) {
+    private fun mergeTwoPagesIntoOne(originalPdfFile: String, outputPdfFile: String?) {
+        val tempFile = File.createTempFile("temp", ".pdf", cacheDir)
+        tempFile.writeBytes(assets.open(originalPdfFile).readBytes())
+        val reader = PdfReader(tempFile.path)
+        val doc = Document(RectangleReadOnly(842f, 595f), 0f, 0f, 0f, 0f)
+        val writer = PdfWriter.getInstance(doc, FileOutputStream(outputPdfFile))
+        doc.open()
+        val totalPages = reader.numberOfPages
+        var i = 1
+        while (i <= totalPages) {
+            doc.newPage()
+            val cb = writer.directContent
+            val page = writer.getImportedPage(reader, i) // page #1
+            val documentWidth = doc.pageSize.width / 2
+            var documentHeight = doc.pageSize.height
+            if (i > 1) documentHeight -= 50f
+            var pageWidth = page.width
+            var pageHeight = page.height
+            var widthScale = documentWidth / pageWidth
+            var heightScale = documentHeight / pageHeight
+            var scale = min(widthScale, heightScale)
+            var offsetX = (documentWidth - pageWidth * scale) / 2
+            val offsetY = 0f
+            cb.addTemplate(page, scale, 0f, 0f, scale, offsetX, offsetY)
+            if (i + 1 <= totalPages) {
+                val page2 = writer.getImportedPage(reader, i + 1) // page #2
+                pageWidth = page.width
+                pageHeight = page.height
+                widthScale = documentWidth / pageWidth
+                heightScale = documentHeight / pageHeight
+                scale = min(widthScale, heightScale)
+                offsetX = (documentWidth - pageWidth * scale) / 2 + documentWidth
+                cb.addTemplate(page2, scale, 0f, 0f, scale, offsetX, offsetY)
+            }
+            i += 2
+        }
+        doc.close()
+    }
 
+    private fun displayTwoPages() {
+        try {
+            val mergedPdfPath = cacheDir.toString() + File.separator + "merged.pdf"
+            mergeTwoPagesIntoOne("sample.pdf", mergedPdfPath)
+            val mergedPdfFile = File(mergedPdfPath)
+            displayPDF(mergedPdfFile)
+        } catch (e: java.lang.Exception) {
+            e.printStackTrace()
+        }
     }
 }
