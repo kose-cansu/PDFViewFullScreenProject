@@ -1,22 +1,17 @@
 package com.example.pdfviewfullscreenproject
 
 import android.content.res.Configuration
-import android.content.res.Resources
 import android.os.Bundle
-import android.util.Log
 import androidx.appcompat.app.AppCompatActivity
 import com.example.pdfviewfullscreenproject.databinding.ActivityMainBinding
 import com.github.barteksc.pdfviewer.scroll.DefaultScrollHandle
 import com.github.barteksc.pdfviewer.util.FitPolicy
 import com.itextpdf.text.Document
-import com.itextpdf.text.DocumentException
 import com.itextpdf.text.RectangleReadOnly
-import com.itextpdf.text.pdf.PdfCopy
 import com.itextpdf.text.pdf.PdfReader
 import com.itextpdf.text.pdf.PdfWriter
 import java.io.File
 import java.io.FileOutputStream
-import java.io.IOException
 import kotlin.math.min
 
 
@@ -92,7 +87,10 @@ class MainActivity : AppCompatActivity() {
         val tempFile = File.createTempFile("temp", ".pdf", cacheDir)
         tempFile.writeBytes(assets.open(originalPdfFile).readBytes())
         val reader = PdfReader(tempFile.path)
-        val doc = Document(RectangleReadOnly(842f, 595f), 0f, 0f, 0f, 0f)
+        val firstPage = reader.getPageSize(1)
+        val width = firstPage.width * 2
+        val height = firstPage.height
+        val doc = Document(RectangleReadOnly(width, height), 0f, 0f, 0f, 0f)
         val writer = PdfWriter.getInstance(doc, FileOutputStream(outputPdfFile))
         doc.open()
         val totalPages = reader.numberOfPages
